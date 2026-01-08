@@ -28,13 +28,14 @@ func main() {
 		}
 
 		cmdName := words[0]
+		args := words[1:]
 		cmd, ok := commandRegistry[cmdName]
 		if !ok {
 			fmt.Println("Unknown command")
 			continue
 		}
 
-		if err := cmd.callback(cfg, &client); err != nil {
+		if err := cmd.callback(cfg, &client, args); err != nil {
 			fmt.Println("Error:", err)
 		}
 	}
