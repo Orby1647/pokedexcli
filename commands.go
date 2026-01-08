@@ -1,30 +1,21 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
+
+	"github.com/orby1647/pokedexcli/internal/pokeapi"
 )
 
 type cliCommand struct {
 	name        string
 	description string
-	callback    func(*config) error
+	callback    func(*config, *pokeapi.Client) error
 }
 
 type config struct {
 	Next     string
 	Previous string
-}
-
-type locationAreaResponse struct {
-	Next     string `json:"next"`
-	Previous string `json:"previous"`
-	Results  []struct {
-		Name string `json:"name"`
-	} `json:"results"`
 }
 
 var commandRegistry = map[string]cliCommand{}
@@ -52,13 +43,13 @@ func init() {
 	}
 }
 
-func commandExit(cfg *config) error {
+func commandExit(cfg *config, client *pokeapi.Client) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
-	return nil // unreachable, but required by signature
+	return nil
 }
 
-func commandHelp(cfg *config) error {
+func commandHelp(cfg *config, client *pokeapi.Client) error {
 	fmt.Println("Welcome to the Pokedex!")
 	fmt.Println("Usage:")
 	fmt.Println()
@@ -70,66 +61,39 @@ func commandHelp(cfg *config) error {
 	return nil
 }
 
-func commandMap(cfg *config) error {
-	url := cfg.Next
-	if url == "" {
-		url = "https://pokeapi.co/api/v2/location-area?offset=0&limit=20"
-	}
-
-	resp, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
+func commandMap(cfg *config, client *pokeapi.Client) error {
+	resp, err := client.ListLocationAreas(&cfg.Next)
 	if err != nil {
 		return err
 	}
 
-	var data locationAreaResponse
-	if err := json.Unmarshal(body, &data); err != nil {
-		return err
-	}
-
-	for _, area := range data.Results {
+	for _, area := range resp.Results {
 		fmt.Println(area.Name)
 	}
 
-	cfg.Next = data.Next
-	cfg.Previous = data.Previous
+	cfg.Next = resp.Next
+	cfg.Previous = resp.Previous
 
 	return nil
 }
 
-func commandMapBack(cfg *config) error {
+func commandMapBack(cfg *config, client *pokeapi.Client) error {
 	if cfg.Previous == "" {
 		fmt.Println("you're on the first page")
 		return nil
 	}
 
-	resp, err := http.Get(cfg.Previous)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
+	resp, err := client.ListLocationAreas(&cfg.Previous)
 	if err != nil {
 		return err
 	}
 
-	var data locationAreaResponse
-	if err := json.Unmarshal(body, &data); err != nil {
-		return err
-	}
-
-	for _, area := range data.Results {
+	for _, area := range resp.Results {
 		fmt.Println(area.Name)
 	}
 
-	cfg.Next = data.Next
-	cfg.Previous = data.Previous
+	cfg.Next = resp.Next
+	cfg.Previous = resp.Previous
 
 	return nil
 }

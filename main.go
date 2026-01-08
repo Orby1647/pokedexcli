@@ -4,11 +4,16 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"time"
+
+	"github.com/orby1647/pokedexcli/internal/pokeapi"
 )
 
 func main() {
 	cfg := &config{}
 	scanner := bufio.NewScanner(os.Stdin)
+
+	client := pokeapi.NewClient(5*time.Second, 10*time.Second)
 
 	for {
 		fmt.Print("Pokedex > ")
@@ -29,7 +34,7 @@ func main() {
 			continue
 		}
 
-		if err := cmd.callback(cfg); err != nil {
+		if err := cmd.callback(cfg, &client); err != nil {
 			fmt.Println("Error:", err)
 		}
 	}
