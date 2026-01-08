@@ -10,7 +10,9 @@ import (
 )
 
 func main() {
-	cfg := &config{}
+	cfg := &config{
+		Pokedex: make(map[string]pokeapi.Pokemon),
+	}
 	scanner := bufio.NewScanner(os.Stdin)
 
 	client := pokeapi.NewClient(5*time.Second, 10*time.Second)

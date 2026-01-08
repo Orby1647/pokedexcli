@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
 
 	"github.com/orby1647/pokedexcli/internal/pokeapi"
@@ -16,6 +17,7 @@ type cliCommand struct {
 type config struct {
 	Next     string
 	Previous string
+	Pokedex  map[string]pokeapi.Pokemon
 }
 
 var commandRegistry = map[string]cliCommand{}
@@ -45,6 +47,11 @@ func init() {
 		name:        "explore <location_area>",
 		description: "Explore a specific location area",
 		callback:    commandExplore,
+	}
+	commandRegistry["catch"] = cliCommand{
+		name:        "catch <pokemon_name>",
+		description: "Catch a specific Pokemon",
+		callback:    commandCatch,
 	}
 }
 
@@ -122,6 +129,47 @@ func commandExplore(cfg *config, client *pokeapi.Client, args []string) error {
 
 	for _, encounter := range resp.PokemonEncounters {
 		fmt.Printf(" - %s\n", encounter.Pokemon.Name)
+	}
+
+	return nil
+}
+
+func commandCatch(cfg *config, client *pokeapi.Client, args []string) error {
+	if len(args) < 1 {
+		fmt.Println("Usage: catch <pokemon>")
+		return nil
+	}
+
+	name := args[0]
+
+	fmt.Printf("Throwing a Pokeball at %s...\n", name)
+
+	// Fetch Pokémon data
+	p, err := client.GetPokemon(name)
+	if err != nil {
+		return fmt.Errorf("could not find Pokémon %s", name)
+	}
+
+	// Already caught?
+	if _, exists := cfg.Pokedex[p.Name]; exists {
+		fmt.Printf("%s is already in your Pokedex!\n", p.Name)
+		return nil
+	}
+
+	// Catch chance based on base experience
+	// Higher base experience = harder to catch
+	chance := 100 - p.BaseExperience
+	if chance < 10 {
+		chance = 10 // always at least 10% chance
+	}
+
+	roll := rand.Intn(100)
+
+	if roll < chance {
+		fmt.Printf("%s was caught!\n", p.Name)
+		cfg.Pokedex[p.Name] = p
+	} else {
+		fmt.Printf("%s escaped!\n", p.Name)
 	}
 
 	return nil
