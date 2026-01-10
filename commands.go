@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"sort"
 
 	"github.com/orby1647/pokedexcli/internal/pokeapi"
 )
@@ -52,6 +53,16 @@ func init() {
 		name:        "catch <pokemon_name>",
 		description: "Catch a specific Pokemon",
 		callback:    commandCatch,
+	}
+	commandRegistry["inspect"] = cliCommand{
+		name:        "inspect <pokemon_name>",
+		description: "Inspect a caught Pokemon",
+		callback:    commandInspect,
+	}
+	commandRegistry["pokedex"] = cliCommand{
+		name:        "pokedex",
+		description: "List all caught Pokemon",
+		callback:    commandPokedex,
 	}
 }
 
@@ -170,6 +181,62 @@ func commandCatch(cfg *config, client *pokeapi.Client, args []string) error {
 		cfg.Pokedex[p.Name] = p
 	} else {
 		fmt.Printf("%s escaped!\n", p.Name)
+	}
+
+	return nil
+}
+
+func commandInspect(cfg *config, client *pokeapi.Client, args []string) error {
+	if len(args) < 1 {
+		fmt.Println("Usage: inspect <pokemon>")
+		return nil
+	}
+
+	name := args[0]
+
+	// Check if Pokémon is in the Pokedex
+	p, ok := cfg.Pokedex[name]
+	if !ok {
+		fmt.Println("you have not caught that pokemon")
+		return nil
+	}
+
+	// Print details
+	fmt.Printf("Name: %s\n", p.Name)
+	fmt.Printf("Height: %d\n", p.Height)
+	fmt.Printf("Weight: %d\n", p.Weight)
+
+	fmt.Println("Stats:")
+	for _, s := range p.Stats {
+		fmt.Printf("  -%s: %d\n", s.Stat.Name, s.BaseStat)
+	}
+
+	fmt.Println("Types:")
+	for _, t := range p.Types {
+		fmt.Printf("  - %s\n", t.Type.Name)
+	}
+
+	return nil
+}
+
+func commandPokedex(cfg *config, client *pokeapi.Client, args []string) error {
+	if len(cfg.Pokedex) == 0 {
+		fmt.Println("Your Pokedex is empty. Go catch some Pokémon!")
+		return nil
+	}
+
+	fmt.Println("Your Pokedex:")
+
+	// Collect names and sort them
+	names := make([]string, 0, len(cfg.Pokedex))
+	for name := range cfg.Pokedex {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	// Print each Pokémon
+	for _, name := range names {
+		fmt.Printf(" - %s\n", name)
 	}
 
 	return nil
